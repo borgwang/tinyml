@@ -1,0 +1,4 @@
+numpy
+pytest
+scikit-learn
+tqdm
