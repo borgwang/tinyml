@@ -1,4 +1,3 @@
 ### tinyml
 
-Reimplementation of machine learning algorithms in scick-learn. 
-
+Implementation of classic machine learning algorithms with sklearn-style API. 
