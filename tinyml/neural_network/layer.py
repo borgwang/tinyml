@@ -20,4 +20,3 @@ class Dense(Layer):
 
     def backward(self, grads):
         pass
-

@@ -1,5 +1,7 @@
 import numpy as np
 
+from tinyml.utils import sigmoid
+
 
 class MSE:
 
