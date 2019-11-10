@@ -1,5 +1,8 @@
 import numpy as np
 
+from tinyml.utils import log_softmax
+from tinyml.utils import softmax
+
 
 class Loss:
     
@@ -12,11 +15,22 @@ class Loss:
 
 class MSE(Loss):
 
-    def loss(self, target, pred):
-        m = pred.shape[0]
-        return 0.5 * np.sum((pred - target) ** 2) / m
+    def loss(self, pred, target):
+        batch = pred.shape[0]
+        return 0.5 * np.sum((pred - target) ** 2) / batch
 
-    def grad(self, target, pred):
-        m = pred.shape[0]
-        return (pred - target) / m
+    def grad(self, pred, target):
+        batch = pred.shape[0]
+        return (pred - target) / batch
 
+
+class SoftmaxCrossEntropy(Loss):
+
+    def loss(self, logits, labels):
+        batch = logits.shape[0]
+        nll = -(log_softmax(logits) * labels).sum() / batch
+        return nll
+
+    def grad(self, logits, labels):
+        batch = logits.shape[0]
+        return (softmax(logits) - labels) / batch
