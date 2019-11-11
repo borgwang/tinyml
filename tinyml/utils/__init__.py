@@ -1,2 +1,2 @@
-from .math_utils import *
+from .math import *
 from .loss import *

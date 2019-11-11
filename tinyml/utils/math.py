@@ -26,5 +26,9 @@ def sigmoid(x):
     return 1.0 / (1.0 + np.exp(-x))
 
 
-def normalize(x, epsilon=1e-8):
+def standardize(x, epsilon=1e-8):
     return (x - x.mean(0)) / (x.std(0) + epsilon)
+
+
+def normalize(x, epsilon=1e-8):
+    return (x + epsilon) / (x + epsilon).sum(0)
