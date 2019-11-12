@@ -70,3 +70,69 @@ class KNNRegressor(KNN):
 
     def _agg_func(self, y, weights):
         return np.sum(y * weights)
+
+
+class KDTreeNode:
+
+    def __init__(self,
+                 left=None,
+                 right=None,
+                 depth=None,
+                 value=None):
+        self.left = left
+        self.right = right
+        self.depth = depth
+        self.value = value
+
+        self.is_leaf = left is None and right is None
+        self.is_adopted = False
+
+
+class KDTree(KNN):
+
+    def __init__(self, n_neighbors, weights, p):
+        super().__init__(n_neighbors, weights, p)
+        self.root = None
+
+    def fit(self, x, y):
+        self.root = self._build_tree(x, y)
+
+    def predict(self, x):
+        # TODO
+        pass
+        
+
+    def _build_tree(self, x, y, curr_depth=0):
+        n_samples, n_feats = x.shape
+        if not n_samples:
+            return None
+
+        col = curr_depth % n_feats
+        split_idx, l_idx, r_idx = self._split(x[:, col])
+
+        left = self._build_tree(x[l_idx], y[l_idx], curr_depth + 1)
+        right = self._build_tree(x[r_idx], y[r_idx], curr_depth + 1)
+        return KDTreeNode(left, right, 
+                          value=(x[split_idx], y[split_idx]),
+                          depth=curr_depth)
+
+    def _split(self, x):
+        """return index of split point, left part and right part"""
+        median = np.percentile(x, 50, interpolation="nearest")
+        split_idx = list(x).index(median)
+        l_idx = x < x[split_idx]
+        r_idx = x > x[split_idx]
+        return split_idx, l_idx, r_idx
+
+
+class KDTreeClassifier(KDTree):
+    
+    def __init__(self):
+        super().__init__()
+
+
+class KDTreeRegressor(KDTree):
+
+    def __init__(self, n_neighbors=5, weights="uniform", p=2):
+        super().__init__(n_neighbors, weights, p)
+
