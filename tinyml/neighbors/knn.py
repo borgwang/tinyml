@@ -5,30 +5,48 @@ import numpy as np
 from tinyml.utils import normalize
 
 
+class KDTreeNode:
+
+    def __init__(self, left=None, right=None, depth=None, x=None, y=None):
+        self.left = left
+        self.right = right
+        self.depth = depth
+        self.x = x
+        self.y = y
+
+
 class KNN:
 
-    def __init__(self, n_neighbors, weights, p):
+    def __init__(self, n_neighbors, weights, p, algorithm):
         self.k = n_neighbors
         assert weights in ("uniform", "distance")
+        assert algorithm in ("brute", "kd_tree")
 
+        self.algorithm = algorithm
         self.weights = weights  
         self.p = p
 
         self.train_x, self.train_y = None, None
 
     def fit(self, x, y):
-        self.train_x, self.train_y = x, y
+        if self.algorithm == "kd_tree":
+            if y.ndim == 1:
+                y = y.reshape((-1, 1))
+            xy = np.concatenate([x, y], axis=1)
+            self.n_feats = x.shape[1]
+            self.root = self._build_kd_tree(xy)
+        else:  # brute-force
+            self.train_x, self.train_y = x, y
 
     def predict(self, x):
         preds = []
-        for test_sample in x:
-            dists = np.array([self._dist_func(test_sample, train_sample)
-                              for train_sample in self.train_x])
-            neighbors_idx = np.argsort(dists)[:self.k]
-            dists = dists[neighbors_idx]
-            neighbors = self.train_y[neighbors_idx]
+        for sample in x:
+            neighbors, dists = self._get_neighbors(sample)
+            if self.weights == "uniform":
+                weights = np.ones(self.k, dtype=float) / self.k
+            else:
+                weights = normalize(1.0 / (dists + 1e-8))
 
-            weights = self._get_weights(dists)
             pred = self._agg_func(neighbors, weights)
             preds.append(pred)
         return np.asarray(preds)
@@ -41,62 +59,23 @@ class KNN:
         """aggregation function"""
         raise NotImplementedError
 
-    def _get_neighbors_and_dists(self):
-        pass
-
-    def _get_weights(self, dists):
-        if self.weights == "uniform":
-            weights = np.ones(self.k, dtype=float) / self.k
+    def _get_neighbors(self, sample):
+        if self.algorithm == "kd_tree":
+            self.nodes = [None for _ in range(self.k)]
+            self.dists = [-float("inf") for _ in range(self.k)]
+            # get k nearest nodes and their distances
+            self._search_kd_tree(self.root, sample)
+            neighbors = np.ravel([n.y for n in self.nodes])
+            dists = np.array(self.dists)
         else:
-            weights = normalize(1.0 / (dists + 1e-8))
-        return weights
+            dists = np.array([self._dist_func(sample, train_sample)
+                              for train_sample in self.train_x])
+            neighbors_idx = np.argsort(dists)[:self.k]
+            dists = dists[neighbors_idx]
+            neighbors = self.train_y[neighbors_idx]
+        return neighbors, dists
 
-
-class KNNClassifier(KNN):
-
-    def __init__(self, n_neighbors=5, weights="uniform", p=2):
-        super().__init__(n_neighbors, weights, p)
-
-    def _agg_func(self, y, weights):
-        score = dict()
-        for cls in np.unique(y):
-            score[cls] = weights[y == cls].sum()
-        return sorted(score.items(), key=lambda kv: kv[1], reverse=True)[0][0]
-
-
-class KNNRegressor(KNN):
-
-    def __init__(self, n_neighbors=5, weights="uniform", p=2):
-        super().__init__(n_neighbors, weights, p)
-
-    def _agg_func(self, y, weights):
-        return np.sum(y * weights)
-
-
-class KDTreeNode:
-
-    def __init__(self, left=None, right=None, depth=None, x=None, y=None):
-        self.left = left
-        self.right = right
-        self.depth = depth
-        self.x = x
-        self.y = y
-
-
-class KDTree(KNN):
-
-    def __init__(self, n_neighbors, weights, p):
-        super().__init__(n_neighbors, weights, p)
-        self.root = None
-
-    def fit(self, x, y):
-        if y.ndim == 1:
-            y = y.reshape((-1, 1))
-        self.n_feats = x.shape[1]
-        xy = np.concatenate([x, y], axis=1)
-        self.root = self._build_tree(xy)
-
-    def _build_tree(self, xy, curr_depth=0):
+    def _build_kd_tree(self, xy, curr_depth=0):
         n_samples = len(xy)
         if not n_samples:
             return None
@@ -105,38 +84,22 @@ class KDTree(KNN):
         xy = xy[np.argsort(xy[:, col])]
         m = n_samples // 2
 
-        left = self._build_tree(xy[:m], curr_depth + 1)
-        right = self._build_tree(xy[m+1:], curr_depth + 1)
+        left = self._build_kd_tree(xy[:m], curr_depth + 1)
+        right = self._build_kd_tree(xy[m+1:], curr_depth + 1)
         return KDTreeNode(left, right, 
                           x=xy[m, :self.n_feats], 
                           y=xy[m, self.n_feats:],
                           depth=curr_depth)
 
-    def predict(self, x):
-        preds = []
-        for sample in x:
-            self.nodes = [None for _ in range(self.k)]
-            self.dists = [-float("inf") for _ in range(self.k)]
-            # get k nearest nodes and their distances
-            self._search(self.root, sample)
-            neighbors = np.ravel([n.y for n in self.nodes])
-            dists = np.array(self.dists)
-            # aggregation
-            weights = self._get_weights(dists)
-            pred = self._agg_func(neighbors, weights)
-
-            preds.append(pred)
-        return np.asarray(preds)
-
-    def _search(self, node, sample):
+    def _search_kd_tree(self, node, sample):
         if node is None:
             return 
         # step1: find leaf node
         col = node.depth % self.n_feats
         if sample[col] < node.x[col]: 
-            self._search(node.left, sample)
+            self._search_kd_tree(node.left, sample)
         else:
-            self._search(node.right, sample)
+            self._search_kd_tree(node.right, sample)
         # step2: update nodes and dists if needed
         dist = self._dist_func(node.x, sample)
         for i in range(self.k):
@@ -149,18 +112,30 @@ class KDTree(KNN):
         # step3: go down if needed
         if abs(sample[col] - node.x[col]) < max(self.dists):
             if sample[col] < node.x[col]:
-                self._search(node.right, sample)
+                self._search_kd_tree(node.right, sample)
             else:
-                self._search(node.left, sample)
+                self._search_kd_tree(node.left, sample)
 
 
-class KDTreeClassifier(KDTree, KNNClassifier):
-    
-    def __init__(self, n_neighbors=5, weights="uniform", p=2):
-        super().__init__(n_neighbors, weights, p)
+class KNNClassifier(KNN):
+
+    def __init__(self, n_neighbors=5, weights="uniform", p=2, algorithm="kd_tree"):
+        super().__init__(n_neighbors, weights, p, algorithm)
+
+    def _agg_func(self, y, weights):
+        score = dict()
+        for cls in np.unique(y):
+            score[cls] = weights[y == cls].sum()
+        return sorted(score.items(), key=lambda kv: kv[1], reverse=True)[0][0]
 
 
-class KDTreeRegressor(KDTree, KNNRegressor):
+class KNNRegressor(KNN):
 
-    def __init__(self, n_neighbors=5, weights="uniform", p=2):
-        super().__init__(n_neighbors, weights, p)
+    def __init__(self, n_neighbors=5, weights="uniform", p=2, algorithm="kd_tree"):
+        super().__init__(n_neighbors, weights, p, algorithm)
+
+    def _agg_func(self, y, weights):
+        result = 0.0
+        for sample, weight in zip(y, weights):
+            result += weight * sample
+        return result
