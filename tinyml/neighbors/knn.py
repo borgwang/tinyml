@@ -55,7 +55,8 @@ class KNN:
         """Minkowski-distance"""
         return np.sum((x1 - x2) ** self.p) ** (1.0 / self.p)
 
-    def _agg_func(self, y, weights):
+    @staticmethod
+    def _agg_func(y, weights):
         """aggregation function"""
         raise NotImplementedError
 
@@ -122,11 +123,12 @@ class KNNClassifier(KNN):
     def __init__(self, n_neighbors=5, weights="uniform", p=2, algorithm="kd_tree"):
         super().__init__(n_neighbors, weights, p, algorithm)
 
-    def _agg_func(self, y, weights):
+    @staticmethod
+    def _agg_func(y, weights):
         score = dict()
         for cls in np.unique(y):
             score[cls] = weights[y == cls].sum()
-        return sorted(score.items(), key=lambda kv: kv[1], reverse=True)[0][0]
+        return max(score.items(), key=lambda kv: kv[1])[0]
 
 
 class KNNRegressor(KNN):
@@ -134,7 +136,8 @@ class KNNRegressor(KNN):
     def __init__(self, n_neighbors=5, weights="uniform", p=2, algorithm="kd_tree"):
         super().__init__(n_neighbors, weights, p, algorithm)
 
-    def _agg_func(self, y, weights):
+    @staticmethod
+    def _agg_func(y, weights):
         result = 0.0
         for sample, weight in zip(y, weights):
             result += weight * sample
