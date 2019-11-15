@@ -6,4 +6,3 @@ Implementation of classic machine learning algorithms with sklearn-style API.
 
 - XGBoost classifier logistic loss function
 - add lbfgs solver for multilayer perception model
-- AdaBoost
