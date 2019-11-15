@@ -6,13 +6,15 @@ class NaiveBayes:
     def __init__(self):
         self.params = {}
 
+        self.classes = None
+
     def fit(self, x, y):
         classes = np.unique(y)
         for cls in classes:
             params = []
             x_c = x[y == cls]
-            self.params[cls] = self._paramerize(cls, x_c)
-        # calcualte priors P(Y)
+            self.params[cls] = self._parameterize(cls, x_c)
+        # calculate priors P(Y)
         self.priors = self._calculate_priors(y, classes)
         self.classes = classes
 
@@ -36,13 +38,13 @@ class NaiveBayes:
     def _calculate_likelihood(x, params):
         raise NotImplementedError
 
-    def _paramerize(self, *args, **kwargs):
+    def _parameterize(self, *args, **kwargs):
         raise NotImplementedError
 
 
 class GaussianNaiveBayes(NaiveBayes):
 
-    def _paramerize(self, cls, x_c):
+    def _parameterize(self, cls, x_c):
         params = []
         for feat in x_c.T:
             params.append({"mean": feat.mean(), "var": feat.var()})
@@ -60,9 +62,9 @@ class MultinomialNaiveBayes(NaiveBayes):
 
     def __init__(self, alpha=1.0):
         super().__init__()
-        self.alpha = 1.0
+        self.alpha = alpha
 
-    def _paramerize(self, cls, x_c):
+    def _parameterize(self, cls, x_c):
         params = []
         for feat in x_c.T:
             freq = {}
