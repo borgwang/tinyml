@@ -21,7 +21,6 @@ def main():
     test_pred = model.predict(test_x)
     print("accuracy: %.4f" % accuracy_score(test_y, test_pred))
 
-    """
     print("AdaBoostRegressor on Boston dataset.")
     dataset = load_boston()
     x, y = dataset.data, dataset.target
@@ -31,7 +30,6 @@ def main():
     model.fit(train_x, train_y)
     test_pred = model.predict(test_x)
     print("mse: %.4f" % mean_squared_error(test_y, test_pred))
-    """
 
 
 if __name__ == '__main__':
