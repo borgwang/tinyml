@@ -37,6 +37,8 @@ class LinearModel:
             self.b -= self.lr * d_b
 
     def predict(self, x):
+        if x.ndim == 1:
+            x = x.reshape((-1, 1))
         if self.normalize:
             x = normalize(x)
         return x @ self.w + self.b

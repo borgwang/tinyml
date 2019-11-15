@@ -50,7 +50,10 @@ class DecisionTree:
             self.feature_scores_ / self.feature_scores_.sum())
 
     def predict(self, x):
-        return np.array([self._predict_sample(x) for x in x])
+        if x.ndim == 1:
+            return self._predict_sample(x)
+        else:
+            return np.array([self._predict_sample(sample) for sample in x])
 
     def _score_func(self, *args, **kwargs):
         raise NotImplementedError

@@ -39,17 +39,19 @@ class KNN:
             self.train_x, self.train_y = x, y
 
     def predict(self, x):
-        preds = []
-        for sample in x:
-            neighbors, dists = self._get_neighbors(sample)
-            if self.weights == "uniform":
-                weights = np.ones(self.k, dtype=float) / self.k
-            else:
-                weights = normalize(1.0 / (dists + 1e-8))
+        if x.ndim == 1:
+            return self._predict_sample(x)
+        else:
+            return np.array([self._predict_sample(sample) for sample in x])
 
-            pred = self._agg_func(neighbors, weights)
-            preds.append(pred)
-        return np.asarray(preds)
+    def _predict_sample(self, sample):
+        neighbors, dists = self._get_neighbors(sample)
+        if self.weights == "uniform":
+            weights = np.ones(self.k, dtype=float) / self.k
+        else:
+            weights = normalize(1.0 / (dists + 1e-8))
+
+        return self._agg_func(neighbors, weights)
 
     def _dist_func(self, x1, x2):
         """Minkowski-distance"""
