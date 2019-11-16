@@ -104,3 +104,40 @@ class KMedoids(KMeans):
                 d += self._get_distance(samples[i], samples[j], ord=1)
             distances.append(d)
         return samples[np.argmin(distances)]
+
+
+class MiniBatchKMeans(KMeans):
+
+    def __init__(self, 
+                 batch_size=100,
+                 n_clusters=3, 
+                 init="k-means++", 
+                 n_init=5, 
+                 max_iter=300,
+                 tol=1e-4):
+        super().__init__(n_clusters, init, n_init, max_iter, tol)
+        self.batch_size = batch_size
+        self.counts = np.zeros(n_clusters)
+
+    def _fit_one_time(self, x):
+        centers = self._get_init_centers(x)
+        for i in range(self.max_iter):
+            # E step
+            cls_dict = defaultdict(list)
+            mini_batch_idx = np.random.choice(range(len(x)), self.batch_size)
+            for sample in x[mini_batch_idx]:
+                cls = np.argmin([self._get_distance(sample, c) for c in centers])
+                cls_dict[cls].append(sample)
+            # M step
+            new_centers = centers
+            for cls, samples in cls_dict.items():
+                for sample in samples:
+                    self.counts[cls] += 1
+                    lr = 1.0 / self.counts[cls]
+                    new_centers[cls] = (1 - lr) * new_centers[cls] + lr * sample
+
+            if self._get_distance(centers, new_centers) < self.tol:
+                break
+            centers = new_centers
+        return centers, self._get_inertia(cls_dict, centers)
+

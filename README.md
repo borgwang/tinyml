@@ -42,6 +42,7 @@ Implementation of classic machine learning algorithms with sklearn-style API.
 - Cluster
   - KMeans
   - KMedoids
+  - MiniBatchKMeans
 
 #### TODO
 
