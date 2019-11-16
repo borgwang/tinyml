@@ -39,15 +39,15 @@ class KMeans:
             # E step
             cls_dict = defaultdict(list)
             for sample in x:
-                cls = np.argmin([self._dist_func(sample, c) for c in centers])
+                cls = np.argmin([self._get_distance(sample, c) for c in centers])
                 cls_dict[cls].append(sample)
             # M step
             new_centers = []
             for cls, samples in cls_dict.items():
-                new_centers.append(np.mean(samples, axis=0))
+                new_centers.append(self._get_center(samples))
             new_centers = np.array(new_centers)
 
-            if self._dist_func(centers, new_centers) < self.tol:
+            if self._get_distance(centers, new_centers) < self.tol:
                 break
             centers = new_centers
         return centers, self._get_inertia(cls_dict, centers)
@@ -59,8 +59,11 @@ class KMeans:
             return np.array([self._predict_sample(sample) for sample in x])
 
     def _predict_sample(self, sample):
-        return np.argmin([self._dist_func(sample, c) 
+        return np.argmin([self._get_distance(sample, c) 
                           for c in self.cluster_centers_])
+
+    def _get_center(self, samples):
+        return np.mean(samples, axis=0)
 
     def _get_init_centers(self, x):
         if self.init == "random":
@@ -72,7 +75,7 @@ class KMeans:
             for i in range(1, self.n_clusters):
                 dists = np.empty(len(x))
                 for i, sample in enumerate(x):
-                    d = np.min([self._dist_func(sample, x[c]) for c in center_idx])
+                    d = np.min([self._get_distance(sample, x[c]) for c in center_idx])
                     dists[i] = d
                 p = dists / dists.sum()
                 new_center_idx = np.random.choice(len(x), p=p)
@@ -87,5 +90,17 @@ class KMeans:
         return inertia
 
     @staticmethod
-    def _dist_func(x1, x2):
-        return np.linalg.norm(x1 - x2)
+    def _get_distance(x1, x2, ord=None):
+        return np.linalg.norm(x1 - x2, ord=ord)
+
+
+class KMedoids(KMeans):
+
+    def _get_center(self, samples):
+        distances = []
+        for i in range(len(samples)):
+            d = 0.0
+            for j in range(len(samples)):
+                d += self._get_distance(samples[i], samples[j], ord=1)
+            distances.append(d)
+        return samples[np.argmin(distances)]
