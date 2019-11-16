@@ -29,12 +29,14 @@ class DecisionTree:
                  max_depth,
                  max_features,
                  min_samples_split, 
-                 min_impurity_split):
+                 min_impurity_split,
+                 random_split):
         self.max_depth = float("inf") if max_depth is None else max_depth
         self.max_features = max_features
         self.min_samples_split = min_samples_split
         self.min_impurity_split = min_impurity_split
         self.criterion = criterion
+        self.random_split = random_split
 
         self.root = None
         self.feature_importances_ = None
@@ -67,7 +69,10 @@ class DecisionTree:
 
         split_score = 0
         if n_samples >= self.min_samples_split and curr_depth <= self.max_depth:
-            split, split_score = self._find_best_split(x, y)
+            if self.random_split:
+                split, split_score = self._random_split(x, y)
+            else:
+                split, split_score = self._best_split(x, y)
 
         if split_score > self.min_impurity_split:
             left = self._build_tree(split["l_x"], split["l_y"], curr_depth + 1)
@@ -79,7 +84,32 @@ class DecisionTree:
             leaf_val = self._aggregation_func(y)
             return DTNode(value=leaf_val)
 
-    def _find_best_split(self, x, y):
+    def _random_split(self, x, y):
+        xy = np.concatenate((x, y), axis=1)
+        n_feats = x.shape[1]
+
+        max_score = 0.0
+        best_split = None
+
+        k = self._get_n_feats(self.max_features, n_feats)
+        cols = np.random.choice(range(n_feats), k, replace=False)
+
+        for col in cols:
+            thr = np.random.choice(x[:, col])
+            l_xy, r_xy = self._divide(xy, col, thr)
+            if not len(l_xy) or not len(r_xy):
+                continue
+            l_y, r_y = l_xy[:, n_feats:], r_xy[:, n_feats:]
+            score = self._score_func(y, l_y, r_y)
+            if score > max_score:
+                max_score = score
+                best_split = {
+                    "feat_idx": col, "threshold": thr,
+                    "l_x": l_xy[:, :n_feats], "r_x": r_xy[:, :n_feats],
+                    "l_y": l_y, "r_y": r_y}
+        return best_split, max_score
+
+    def _best_split(self, x, y):
         xy = np.concatenate((x, y), axis=1)
         n_feats = x.shape[1]
 
@@ -140,7 +170,7 @@ class DecisionTree:
             if max_feats == "sqrt":
                 return int(np.sqrt(n_feats))
             elif max_feats == "log2":
-                return int(np.log2(n_feats))
+                return int(np.log2(n_feats + 1))
         return n_feats
 
 
@@ -151,10 +181,11 @@ class DecisionTreeClassifier(DecisionTree):
                  max_depth=None,
                  max_features=None,
                  min_samples_split=2,
-                 min_impurity_split=1e-7):
+                 min_impurity_split=1e-7,
+                 random_split=False):
         assert criterion in ("info_gain", "gain_ratio", "gini")
         super().__init__(criterion, max_depth, max_features, 
-                         min_samples_split, min_impurity_split)
+                         min_samples_split, min_impurity_split, random_split)
 
     def _score_func(self, y, l_y, r_y):
         if self.criterion == "info_gain":
@@ -209,10 +240,11 @@ class DecisionTreeRegressor(DecisionTree):
                  max_depth=None,
                  max_features=None,
                  min_samples_split=2,
-                 min_impurity_split=1e-7):
+                 min_impurity_split=1e-7,
+                 random_split=False):
         assert criterion in ("mse", "mae", "friedman_mse")
         super().__init__(criterion, max_depth, max_features, 
-                         min_samples_split, min_impurity_split)
+                         min_samples_split, min_impurity_split, random_split)
 
     def _score_func(self, y, l_y, r_y):
         if self.criterion == "mse":

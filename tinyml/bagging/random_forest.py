@@ -46,7 +46,7 @@ class RandomForestClassifier(RandomForest):
     def __init__(self,
                  n_estimators=100,
                  criterion="gini",
-                 max_features=None,
+                 max_features="sqrt",
                  min_samples_split=2,
                  min_impurity_split=1e-7,
                  max_depth=None):
@@ -69,7 +69,7 @@ class RandomForestRegressor(RandomForest):
     def __init__(self,
                  n_estimators=100,
                  criterion="mse",
-                 max_features=None,
+                 max_features="sqrt",
                  min_samples_split=2,
                  min_impurity_split=1e-7,
                  max_depth=None):

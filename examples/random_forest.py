@@ -8,6 +8,8 @@ from sklearn.model_selection import train_test_split
 
 from tinyml.bagging import RandomForestClassifier
 from tinyml.bagging import RandomForestRegressor
+from tinyml.bagging import ExtraTreesClassifier
+from tinyml.bagging import ExtraTreesRegressor
 
 
 def main():
@@ -20,13 +22,25 @@ def main():
     model.fit(train_x, train_y)
     test_pred = model.predict(test_x)
     print("accuracy: %.4f" % accuracy_score(test_y, test_pred))
-    
+
+    print("ExtraTreesClassifier on Digits dataset.")
+    model = ExtraTreesClassifier(n_estimators=20, max_depth=5, max_features="sqrt")
+    model.fit(train_x, train_y)
+    test_pred = model.predict(test_x)
+    print("accuracy: %.4f" % accuracy_score(test_y, test_pred))
+
     print("RandomForestRegressor on Boston dataset.")
     dataset = load_boston()
     x, y = dataset.data, dataset.target
     train_x, test_x, train_y, test_y = train_test_split(x, y, test_size=0.1)
 
     model = RandomForestRegressor(n_estimators=20, max_depth=5, max_features="sqrt")
+    model.fit(train_x, train_y)
+    test_pred = model.predict(test_x)
+    print("mse: %.4f" % mean_squared_error(test_y, test_pred))
+
+    print("ExtraTreesRegressor on Boston dataset.")
+    model = ExtraTreesRegressor(n_estimators=20, max_depth=5, max_features="sqrt")
     model.fit(train_x, train_y)
     test_pred = model.predict(test_x)
     print("mse: %.4f" % mean_squared_error(test_y, test_pred))

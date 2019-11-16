@@ -27,6 +27,8 @@ Implementation of classic machine learning algorithms with sklearn-style API.
   - Bagging
     - RandomForestClassifier
     - RandomForestRegressor
+    - ExtraTreesClassifier
+    - ExtraTreesRegressor
   - Boosting
     - AdaBoostClassifier
     - AdaBoostRegressor
