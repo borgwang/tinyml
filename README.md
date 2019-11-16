@@ -39,6 +39,8 @@ Implementation of classic machine learning algorithms with sklearn-style API.
 - Neural Network
   - MLPClassifier
   - MLPRegressor
+- Cluster
+  - KMeans
 
 #### TODO
 
